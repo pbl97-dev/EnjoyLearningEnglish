@@ -17,6 +17,18 @@ function value(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
 
+function requireConfirmation(formData: FormData, expected: string) {
+  if (value(formData, "confirm") !== expected) {
+    redirect(`/admin?error=Type ${expected} to confirm this action`);
+  }
+}
+
+function refreshAdmin(message: string) {
+  revalidatePath("/admin");
+  revalidatePath("/courses");
+  redirect(`/admin?message=${encodeURIComponent(message)}`);
+}
+
 export async function createStudent(formData: FormData) {
   await requireRole(["admin"]);
   const email = value(formData, "email");
@@ -43,6 +55,79 @@ export async function createStudent(formData: FormData) {
 
   revalidatePath("/admin");
   redirect("/admin?message=Student created");
+}
+
+export async function updateStudent(formData: FormData) {
+  await requireRole(["admin"]);
+  const profileId = value(formData, "profile_id");
+  const fullName = value(formData, "full_name");
+  const email = value(formData, "email");
+  const admin = createAdminClient();
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ full_name: fullName })
+    .eq("id", profileId);
+
+  if (profileError) {
+    redirect(`/admin?error=${encodeURIComponent(profileError.message)}`);
+  }
+
+  if (email) {
+    const { error: authError } = await admin.auth.admin.updateUserById(
+      profileId,
+      { email },
+    );
+
+    if (authError) {
+      redirect(`/admin?error=${encodeURIComponent(authError.message)}`);
+    }
+  }
+
+  refreshAdmin("Student updated");
+}
+
+export async function deactivateStudent(formData: FormData) {
+  await requireRole(["admin"]);
+  requireConfirmation(formData, "DEACTIVATE");
+  const admin = createAdminClient();
+
+  const { error } = await admin.auth.admin.updateUserById(
+    value(formData, "profile_id"),
+    { ban_duration: "876000h" },
+  );
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Student deactivated");
+}
+
+export async function reactivateStudent(formData: FormData) {
+  await requireRole(["admin"]);
+  const admin = createAdminClient();
+
+  const { error } = await admin.auth.admin.updateUserById(
+    value(formData, "profile_id"),
+    { ban_duration: "none" },
+  );
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Student reactivated");
+}
+
+export async function deleteStudent(formData: FormData) {
+  await requireRole(["admin"]);
+  requireConfirmation(formData, "DELETE");
+  const admin = createAdminClient();
+
+  const { error } = await admin.auth.admin.deleteUser(
+    value(formData, "profile_id"),
+  );
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Student permanently deleted");
 }
 
 export async function updateUserRole(formData: FormData) {
@@ -82,6 +167,38 @@ export async function createGroup(formData: FormData) {
   redirect("/admin?message=Group created");
 }
 
+export async function updateGroup(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("groups")
+    .update({
+      name: value(formData, "name"),
+      description: value(formData, "description"),
+    })
+    .eq("id", value(formData, "group_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Group updated");
+}
+
+export async function deleteGroup(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  requireConfirmation(formData, "DELETE");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("groups")
+    .delete()
+    .eq("id", value(formData, "group_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Group deleted");
+}
+
 export async function addStudentToGroup(formData: FormData) {
   await requireRole(["teacher", "admin"]);
   const supabase = await createClient();
@@ -116,6 +233,40 @@ export async function createCourse(formData: FormData) {
   redirect("/admin?message=Course created");
 }
 
+export async function updateCourse(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("courses")
+    .update({
+      title: value(formData, "title"),
+      level: value(formData, "level"),
+      description: value(formData, "description"),
+      published: formData.get("published") === "on",
+    })
+    .eq("id", value(formData, "course_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Course updated");
+}
+
+export async function deleteCourse(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  requireConfirmation(formData, "DELETE");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("courses")
+    .delete()
+    .eq("id", value(formData, "course_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Course deleted");
+}
+
 export async function createModule(formData: FormData) {
   await requireRole(["teacher", "admin"]);
   const supabase = await createClient();
@@ -131,6 +282,39 @@ export async function createModule(formData: FormData) {
 
   revalidatePath("/admin");
   redirect("/admin?message=Module created");
+}
+
+export async function updateModule(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("modules")
+    .update({
+      title: value(formData, "title"),
+      summary: value(formData, "summary"),
+      position: Number(value(formData, "position") || 1),
+    })
+    .eq("id", value(formData, "module_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Module updated");
+}
+
+export async function deleteModule(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  requireConfirmation(formData, "DELETE");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("modules")
+    .delete()
+    .eq("id", value(formData, "module_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Module deleted");
 }
 
 export async function createLesson(formData: FormData) {
@@ -150,6 +334,41 @@ export async function createLesson(formData: FormData) {
 
   revalidatePath("/admin");
   redirect("/admin?message=Lesson created");
+}
+
+export async function updateLesson(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("lessons")
+    .update({
+      title: value(formData, "title"),
+      objective: value(formData, "objective"),
+      content_html: sanitizeHtml(value(formData, "content_html")),
+      position: Number(value(formData, "position") || 1),
+      published: formData.get("published") === "on",
+    })
+    .eq("id", value(formData, "lesson_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Lesson updated");
+}
+
+export async function deleteLesson(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  requireConfirmation(formData, "DELETE");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("lessons")
+    .delete()
+    .eq("id", value(formData, "lesson_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Lesson deleted");
 }
 
 export async function createLessonMaterial(formData: FormData) {
@@ -212,6 +431,70 @@ export async function createLessonMaterial(formData: FormData) {
   redirect("/admin?message=Material added");
 }
 
+export async function updateLessonMaterial(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  const supabase = await createClient();
+  const materialType = value(formData, "material_type");
+  let url = value(formData, "url") || null;
+  let contentHtml: string | null = null;
+
+  if (materialType === "html") {
+    contentHtml = sanitizeHtml(value(formData, "content_html"));
+    url = null;
+  }
+
+  if (materialType === "external_url" && url && !isValidHttpUrl(url)) {
+    redirect("/admin?error=External URL must be a valid http or https URL");
+  }
+
+  if (materialType === "embed" && url && !isAllowedEmbedUrl(url)) {
+    redirect("/admin?error=Embed URL is not on the allowed list");
+  }
+
+  const { error } = await supabase
+    .from("lesson_materials")
+    .update({
+      title: value(formData, "title"),
+      material_type: materialType,
+      url,
+      content_html: contentHtml,
+      position: Number(value(formData, "position") || 1),
+    })
+    .eq("id", value(formData, "material_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Material updated");
+}
+
+export async function deleteLessonMaterial(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  requireConfirmation(formData, "DELETE");
+  const supabase = await createClient();
+  const materialId = value(formData, "material_id");
+
+  const { data: material } = await supabase
+    .from("lesson_materials")
+    .select("storage_path")
+    .eq("id", materialId)
+    .maybeSingle();
+
+  if (material?.storage_path) {
+    await supabase.storage
+      .from("lesson-materials")
+      .remove([material.storage_path]);
+  }
+
+  const { error } = await supabase
+    .from("lesson_materials")
+    .delete()
+    .eq("id", materialId);
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Material deleted");
+}
+
 export async function assignCourseToGroup(formData: FormData) {
   await requireRole(["teacher", "admin"]);
   const supabase = await createClient();
@@ -226,6 +509,21 @@ export async function assignCourseToGroup(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/courses");
   redirect("/admin?message=Course assigned");
+}
+
+export async function removeCourseAssignment(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  requireConfirmation(formData, "REMOVE");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("group_course_assignments")
+    .delete()
+    .eq("id", value(formData, "assignment_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Course assignment removed");
 }
 
 export async function markLessonComplete(formData: FormData) {
