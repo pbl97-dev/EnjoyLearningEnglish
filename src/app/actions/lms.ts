@@ -30,6 +30,10 @@ function value(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function requireConfirmation(formData: FormData, expected: string) {
   if (value(formData, "confirm") !== expected) {
     redirect(`/admin?error=Type ${expected} to confirm this action`);
@@ -83,7 +87,24 @@ export async function createStudent(formData: FormData) {
   const email = value(formData, "email");
   const password = value(formData, "password");
   const fullName = value(formData, "full_name");
+  const groupId = value(formData, "group_id");
   const admin = createAdminClient();
+
+  if (!fullName) {
+    redirect("/admin?error=Student full name is required");
+  }
+
+  if (!email) {
+    redirect("/admin?error=Student email is required");
+  }
+
+  if (!isValidEmail(email)) {
+    redirect("/admin?error=Enter a valid student email address");
+  }
+
+  if (!password || password.length < 6) {
+    redirect("/admin?error=Enter a temporary password with at least 6 characters");
+  }
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
@@ -94,16 +115,40 @@ export async function createStudent(formData: FormData) {
     },
   });
 
-  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+  if (error) {
+    const message = error.message.toLowerCase().includes("already")
+      ? "A user with this email already exists. Use Add student to group for existing students."
+      : `Failed to create Supabase Auth user: ${error.message}`;
 
-  await admin.from("profiles").upsert({
+    redirect(`/admin?error=${encodeURIComponent(message)}`);
+  }
+
+  const { error: profileError } = await admin.from("profiles").upsert({
     id: data.user.id,
     full_name: fullName,
     role: "student",
   });
 
-  revalidatePath("/admin");
-  redirect("/admin?message=Student created");
+  if (profileError) {
+    redirect(`/admin?error=${encodeURIComponent(profileError.message)}`);
+  }
+
+  if (groupId) {
+    const { error: groupError } = await admin.from("group_students").upsert({
+      group_id: groupId,
+      student_id: data.user.id,
+    });
+
+    if (groupError) {
+      redirect(`/admin?error=${encodeURIComponent(groupError.message)}`);
+    }
+  }
+
+  const message = groupId
+    ? "Student created and assigned to group. No email was sent; share the email and temporary password manually."
+    : "Student created. No email was sent; share the email and temporary password manually.";
+
+  refreshAdmin(message);
 }
 
 export async function updateStudent(formData: FormData) {

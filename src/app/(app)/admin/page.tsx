@@ -318,38 +318,68 @@ export default async function AdminPage({
       <Section
         id="students-groups"
         title="Students & Groups"
-        description="Create student accounts, organize classes, and place students into the right learning group."
+        description="Invite students, organize classes, and place learners into the right group."
       >
         <div className="grid gap-4 lg:grid-cols-3">
           <ToolCard
-            title="Create student"
-            description="Add a student login with a temporary password."
+            title="Invite student"
+            description="Create a student login and optionally assign the student to a group."
           >
-            <form action={createStudent} className="grid gap-3">
-              <Field label="Full name">
-                <input className={inputClass} name="full_name" required />
-              </Field>
-              <Field label="Email">
-                <input
-                  className={inputClass}
-                  name="email"
-                  type="email"
-                  required
-                />
-              </Field>
-              <Field label="Temporary password">
-                <input
-                  className={inputClass}
-                  minLength={6}
-                  name="password"
-                  type="password"
-                  required
-                />
-              </Field>
-              <Button className="w-fit" type="submit">
-                Create student
-              </Button>
-            </form>
+            {currentProfile.role === "admin" ? (
+              <form action={createStudent} className="grid gap-3">
+                <Field label="Student full name">
+                  <input
+                    className={inputClass}
+                    name="full_name"
+                    placeholder="Ana Garcia"
+                    required
+                  />
+                </Field>
+                <Field label="Student email">
+                  <input
+                    className={inputClass}
+                    name="email"
+                    type="email"
+                    placeholder="ana@example.com"
+                    required
+                  />
+                </Field>
+                <Field label="Group/class assignment">
+                  <select className={inputClass} name="group_id">
+                    <option value="">Assign later</option>
+                    {allGroups.map((group: any) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Temporary password">
+                  <input
+                    className={inputClass}
+                    minLength={6}
+                    name="password"
+                    type="text"
+                    placeholder="At least 6 characters"
+                    required
+                  />
+                </Field>
+                <p className="rounded-md bg-blue-50 p-3 text-sm leading-6 text-blue-800">
+                  This creates a Supabase Auth account and a student profile.
+                  Real email invitations are not configured, so no email is
+                  sent. Share the student email and temporary password manually,
+                  then ask the student to sign in.
+                </p>
+                <Button className="w-fit" type="submit">
+                  Add student
+                </Button>
+              </form>
+            ) : (
+              <p className="rounded-md bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+                Only admins can create student login accounts. Teachers can add
+                existing students to groups with the form below.
+              </p>
+            )}
           </ToolCard>
 
           <ToolCard
