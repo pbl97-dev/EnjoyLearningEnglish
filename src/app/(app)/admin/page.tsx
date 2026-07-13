@@ -1,20 +1,23 @@
 import {
   addStudentToGroup,
+  addTrustedEmbedSource,
   assignCourseToGroup,
   createCourse,
   createGroup,
   createLesson,
-  createLessonMaterial,
   createModule,
   createStudent,
   deactivateStudent,
+  deactivateTrustedEmbedSource,
   deleteCourse,
   deleteGroup,
   deleteLesson,
   deleteLessonMaterial,
   deleteModule,
   deleteStudent,
+  deleteTrustedEmbedSource,
   reactivateStudent,
+  reactivateTrustedEmbedSource,
   removeCourseAssignment,
   updateCourse,
   updateGroup,
@@ -25,6 +28,7 @@ import {
   updateUserRole,
 } from "@/app/actions/lms";
 import { Button } from "@/components/button";
+import { LessonMaterialUploadForm } from "@/components/admin/lesson-material-upload-form";
 import {
   Badge,
   Card,
@@ -41,6 +45,7 @@ const sections = [
   { href: "#students-groups", label: "Students & Groups" },
   { href: "#curriculum", label: "Courses & Curriculum" },
   { href: "#materials", label: "Lesson Materials" },
+  { href: "#trusted-embed-sources", label: "Trusted Embed Sources" },
   { href: "#assignments", label: "Assignments" },
   { href: "#users-roles", label: "Users & Roles" },
 ];
@@ -196,7 +201,7 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{ message?: string; error?: string }>;
 }) {
-  await requireRole(["teacher", "admin"]);
+  const currentProfile = await requireRole(["teacher", "admin"]);
   const params = await searchParams;
   const supabase = await createClient();
 
@@ -209,6 +214,7 @@ export default async function AdminPage({
     { data: materials },
     { data: memberships },
     { data: assignments },
+    { data: trustedEmbedSources },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -230,6 +236,11 @@ export default async function AdminPage({
       .from("group_course_assignments")
       .select("*, groups(name), courses(title)")
       .order("assigned_at", { ascending: false }),
+    supabase
+      .from("trusted_embed_sources")
+      .select("*")
+      .order("domain")
+      .then((result) => (result.error ? { data: [] } : result)),
   ]);
 
   const allProfiles = profiles || [];
@@ -240,9 +251,14 @@ export default async function AdminPage({
   const allMaterials = materials || [];
   const allMemberships = memberships || [];
   const allAssignments = assignments || [];
+  const allTrustedEmbedSources = trustedEmbedSources || [];
   const students = allProfiles.filter(
     (profile: any) => profile.role === "student",
   );
+  const lessonOptions = allLessons.map((lesson: any) => ({
+    id: lesson.id,
+    title: lesson.title,
+  }));
   const modulesByCourse = allModules.reduce((acc: any, module: any) => {
     acc[module.course_id] = [...(acc[module.course_id] || []), module];
     return acc;
@@ -1039,7 +1055,8 @@ export default async function AdminPage({
                   </p>
                   <p>
                     Use <strong>Embed/Iframe</strong> only for safe embeddable
-                    URLs from approved providers.
+                    URLs from trusted providers. Admins can manage trusted
+                    providers in Trusted Embed Sources.
                   </p>
                   <p>
                     Use <strong>Upload file</strong> for PDFs, images, audio, or
@@ -1054,70 +1071,7 @@ export default async function AdminPage({
             title="Attach lesson material"
             description="Choose a lesson, then add one file, link, embed, or HTML block."
           >
-            <form action={createLessonMaterial} className="grid gap-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Lesson">
-                  <select className={inputClass} name="lesson_id" required>
-                    <option value="">Select lesson</option>
-                    {allLessons.map((lesson: any) => (
-                      <option key={lesson.id} value={lesson.id}>
-                        {lesson.title}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Material title">
-                  <input className={inputClass} name="title" required />
-                </Field>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Material type">
-                  <select className={inputClass} name="material_type" required>
-                    <option value="external_url">External URL</option>
-                    <option value="embed">Embed/Iframe</option>
-                    <option value="html">Text/HTML block</option>
-                    <option value="pdf">Upload file</option>
-                  </select>
-                </Field>
-                <Field label="Position">
-                  <input
-                    className={inputClass}
-                    name="position"
-                    type="number"
-                    min={1}
-                    defaultValue={1}
-                  />
-                </Field>
-              </div>
-
-              <Field label="Upload file for PDF, image, audio, or video">
-                <input
-                  className={inputClass}
-                  name="file"
-                  type="file"
-                  accept=".pdf,image/*,audio/*,video/*"
-                />
-              </Field>
-              <Field label="External URL or safe embed source">
-                <input
-                  className={inputClass}
-                  name="url"
-                  placeholder="https://..."
-                />
-              </Field>
-              <Field label="Text/HTML block">
-                <textarea className={inputClass} name="content_html" rows={4} />
-              </Field>
-              {!allLessons.length ? (
-                <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-                  Create a lesson before attaching materials.
-                </p>
-              ) : null}
-              <Button className="w-fit" type="submit">
-                Add material
-              </Button>
-            </form>
+            <LessonMaterialUploadForm lessons={lessonOptions} />
           </ToolCard>
         </div>
 
@@ -1228,6 +1182,12 @@ export default async function AdminPage({
                                   placeholder="https://..."
                                 />
                               </Field>
+                              <p className="rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+                                Paste a trusted embeddable URL or iframe code.
+                                The LMS will use only the secure src URL. Some
+                                websites may still block iframe display; if an
+                                embed does not load, use External URL instead.
+                              </p>
                               <Field label="Text/HTML block">
                                 <textarea
                                   className={inputClass}
@@ -1273,6 +1233,116 @@ export default async function AdminPage({
               <EmptyState
                 title="No lessons yet"
                 description="Create lessons before managing lesson materials."
+              />
+            )}
+          </ManagementList>
+        </div>
+      </Section>
+
+      <Section
+        id="trusted-embed-sources"
+        title="Trusted Embed Sources"
+        description="Manage which domains are allowed for controlled lesson-material iframes."
+      >
+        <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.8fr)_1fr]">
+          <ToolCard
+            title="Add trusted site"
+            description="Add only domains you trust for educational embeds. Do not paste full iframe code here."
+          >
+            {currentProfile.role === "admin" ? (
+              <form action={addTrustedEmbedSource} className="grid gap-3">
+                <Field label="Label">
+                  <input
+                    className={inputClass}
+                    name="label"
+                    placeholder="British Council"
+                  />
+                </Field>
+                <Field label="Domain">
+                  <input
+                    className={inputClass}
+                    name="domain"
+                    placeholder="learnenglish.britishcouncil.org"
+                    required
+                  />
+                </Field>
+                <p className="rounded-md bg-blue-50 p-3 text-sm leading-6 text-blue-800">
+                  The LMS validates only HTTPS iframe src URLs against trusted
+                  domains. Some websites may still block iframe display with
+                  their own security settings; if an embed does not load, use
+                  External URL instead.
+                </p>
+                <Button className="w-fit" type="submit">
+                  Add trusted site
+                </Button>
+              </form>
+            ) : (
+              <p className="rounded-md bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+                Only admins can manage trusted embed sources.
+              </p>
+            )}
+          </ToolCard>
+
+          <ManagementList
+            title="Trusted domains"
+            description="Active domains can be used for Embed/Iframe lesson materials. Deactivate first when you want to pause a source."
+            count={allTrustedEmbedSources.length}
+          >
+            {allTrustedEmbedSources.length ? (
+              allTrustedEmbedSources.map((source: any) => (
+                <div
+                  key={source.id}
+                  className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-ink">
+                        {source.label || source.domain}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {source.domain}
+                      </p>
+                    </div>
+                    <Badge>{source.is_active ? "Active" : "Inactive"}</Badge>
+                  </div>
+
+                  {currentProfile.role === "admin" ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <form
+                        action={
+                          source.is_active
+                            ? deactivateTrustedEmbedSource
+                            : reactivateTrustedEmbedSource
+                        }
+                      >
+                        <input
+                          type="hidden"
+                          name="source_id"
+                          value={source.id}
+                        />
+                        <Button
+                          className="w-fit"
+                          type="submit"
+                          variant="secondary"
+                        >
+                          {source.is_active ? "Deactivate" : "Reactivate"}
+                        </Button>
+                      </form>
+
+                      <ConfirmDelete
+                        action={deleteTrustedEmbedSource}
+                        hidden={{ source_id: source.id }}
+                        label="Delete trusted site"
+                        warning="Deleting this trusted source prevents future embeds from this domain from passing validation. Existing saved material URLs are not rewritten."
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <EmptyState
+                title="No trusted sources found"
+                description="Run the trusted embed sources migration, then active domains will appear here."
               />
             )}
           </ManagementList>

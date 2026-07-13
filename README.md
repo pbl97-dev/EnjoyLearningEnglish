@@ -82,6 +82,7 @@ The service role key is used only by trusted server actions for admin-created us
 ```text
 supabase/migrations/001_lms_schema.sql
 supabase/migrations/002_storage_policies.sql
+supabase/migrations/003_trusted_embed_sources.sql
 supabase/seed.sql
 ```
 

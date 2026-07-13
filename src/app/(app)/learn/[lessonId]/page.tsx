@@ -4,7 +4,7 @@ import { Button } from "@/components/button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { sanitizeHtml } from "@/lib/validation";
+import { extractEmbedSrc, sanitizeHtml } from "@/lib/validation";
 
 function MaterialView({ material }: { material: any }) {
   if (material.material_type === "html") {
@@ -19,13 +19,21 @@ function MaterialView({ material }: { material: any }) {
   }
 
   if (material.material_type === "embed" && material.url) {
+    const embedSrc = extractEmbedSrc(material.url);
+
+    if (!embedSrc) {
+      return null;
+    }
+
     return (
       <iframe
         className="aspect-video w-full rounded-md border border-slate-200 bg-white"
-        src={material.url}
+        src={embedSrc}
         title={material.title}
+        loading="lazy"
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
         referrerPolicy="no-referrer"
+        allowFullScreen
       />
     );
   }

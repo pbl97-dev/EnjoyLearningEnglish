@@ -7,11 +7,24 @@ import { requireProfile, requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
-  isAllowedEmbedUrl,
+  allowedEmbedHosts,
+  extractEmbedSrc,
   isValidHttpUrl,
+  isTrustedEmbedUrlForHosts,
   materialTypeFromMime,
+  normalizeEmbedUrl,
+  normalizeTrustedDomain,
   sanitizeHtml,
+  untrustedEmbedSourceMessage,
 } from "@/lib/validation";
+
+const MAX_MATERIAL_UPLOAD_BYTES = 25 * 1024 * 1024;
+const supportedUploadTypes = new Set([
+  "pdf",
+  "image",
+  "audio",
+  "video",
+]);
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -27,6 +40,42 @@ function refreshAdmin(message: string) {
   revalidatePath("/admin");
   revalidatePath("/courses");
   redirect(`/admin?message=${encodeURIComponent(message)}`);
+}
+
+async function getTrustedEmbedHosts(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await supabase
+    .from("trusted_embed_sources")
+    .select("domain")
+    .eq("is_active", true);
+
+  if (error || !data?.length) {
+    return allowedEmbedHosts;
+  }
+
+  return data.map((source: { domain: string }) => source.domain);
+}
+
+async function cleanTrustedEmbedUrl(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  input: string | null,
+) {
+  if (!input) {
+    return null;
+  }
+
+  const cleanUrl = extractEmbedSrc(input);
+
+  if (!cleanUrl) {
+    redirect(`/admin?error=${encodeURIComponent(untrustedEmbedSourceMessage)}`);
+  }
+
+  const trustedHosts = await getTrustedEmbedHosts(supabase);
+
+  if (!isTrustedEmbedUrlForHosts(cleanUrl, trustedHosts)) {
+    redirect(`/admin?error=${encodeURIComponent(untrustedEmbedSourceMessage)}`);
+  }
+
+  return normalizeEmbedUrl(cleanUrl);
 }
 
 export async function createStudent(formData: FormData) {
@@ -390,12 +439,21 @@ export async function createLessonMaterial(formData: FormData) {
     redirect("/admin?error=External URL must be a valid http or https URL");
   }
 
-  if (materialType === "embed" && url && !isAllowedEmbedUrl(url)) {
-    redirect("/admin?error=Embed URL is not on the allowed list");
+  if (materialType === "embed" && url) {
+    url = await cleanTrustedEmbedUrl(supabase, url);
   }
 
   if (file instanceof File && file.size > 0) {
+    if (file.size > MAX_MATERIAL_UPLOAD_BYTES) {
+      redirect("/admin?error=File upload is too large. The current limit is 25 MB. Host larger videos externally and add them as an External URL or Embed.");
+    }
+
     materialType = materialTypeFromMime(file.type);
+
+    if (!supportedUploadTypes.has(materialType)) {
+      redirect("/admin?error=Unsupported upload type. Please upload a PDF, image, audio, or video file.");
+    }
+
     const extension = file.name.split(".").pop() || "file";
     storagePath = `${lessonId}/${randomUUID()}.${extension}`;
     const { error: uploadError } = await supabase.storage
@@ -431,6 +489,46 @@ export async function createLessonMaterial(formData: FormData) {
   redirect("/admin?message=Material added");
 }
 
+export async function createLessonMaterialRecord(formData: FormData) {
+  await requireRole(["teacher", "admin"]);
+  const supabase = await createClient();
+  const materialType = value(formData, "material_type");
+  let url = value(formData, "url") || null;
+  const storagePath = value(formData, "storage_path") || null;
+  let contentHtml: string | null = null;
+
+  if (!supportedUploadTypes.has(materialType) && materialType !== "external_url" && materialType !== "embed" && materialType !== "html") {
+    redirect("/admin?error=Unsupported material type.");
+  }
+
+  if (materialType === "html") {
+    contentHtml = sanitizeHtml(value(formData, "content_html"));
+    url = null;
+  }
+
+  if (materialType === "external_url" && url && !isValidHttpUrl(url)) {
+    redirect("/admin?error=External URL must be a valid http or https URL");
+  }
+
+  if (materialType === "embed" && url) {
+    url = await cleanTrustedEmbedUrl(supabase, url);
+  }
+
+  const { error } = await supabase.from("lesson_materials").insert({
+    lesson_id: value(formData, "lesson_id"),
+    title: value(formData, "title"),
+    material_type: materialType,
+    url,
+    storage_path: storagePath,
+    content_html: contentHtml,
+    position: Number(value(formData, "position") || 1),
+  });
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Material added");
+}
+
 export async function updateLessonMaterial(formData: FormData) {
   await requireRole(["teacher", "admin"]);
   const supabase = await createClient();
@@ -447,8 +545,8 @@ export async function updateLessonMaterial(formData: FormData) {
     redirect("/admin?error=External URL must be a valid http or https URL");
   }
 
-  if (materialType === "embed" && url && !isAllowedEmbedUrl(url)) {
-    redirect("/admin?error=Embed URL is not on the allowed list");
+  if (materialType === "embed" && url) {
+    url = await cleanTrustedEmbedUrl(supabase, url);
   }
 
   const { error } = await supabase
@@ -524,6 +622,70 @@ export async function removeCourseAssignment(formData: FormData) {
   if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
 
   refreshAdmin("Course assignment removed");
+}
+
+export async function addTrustedEmbedSource(formData: FormData) {
+  await requireRole(["admin"]);
+  const supabase = await createClient();
+  const domain = normalizeTrustedDomain(value(formData, "domain"));
+  const label = value(formData, "label") || domain;
+
+  if (!domain || !domain.includes(".") || domain.includes("*")) {
+    redirect("/admin?error=Enter a valid trusted domain, such as wordwall.net");
+  }
+
+  const { error } = await supabase.from("trusted_embed_sources").upsert({
+    domain,
+    label,
+    is_active: true,
+  });
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Trusted embed source saved");
+}
+
+export async function deactivateTrustedEmbedSource(formData: FormData) {
+  await requireRole(["admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("trusted_embed_sources")
+    .update({ is_active: false })
+    .eq("id", value(formData, "source_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Trusted embed source deactivated");
+}
+
+export async function reactivateTrustedEmbedSource(formData: FormData) {
+  await requireRole(["admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("trusted_embed_sources")
+    .update({ is_active: true })
+    .eq("id", value(formData, "source_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Trusted embed source reactivated");
+}
+
+export async function deleteTrustedEmbedSource(formData: FormData) {
+  await requireRole(["admin"]);
+  requireConfirmation(formData, "DELETE");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("trusted_embed_sources")
+    .delete()
+    .eq("id", value(formData, "source_id"));
+
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshAdmin("Trusted embed source deleted");
 }
 
 export async function markLessonComplete(formData: FormData) {
