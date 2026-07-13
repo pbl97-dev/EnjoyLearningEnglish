@@ -28,13 +28,13 @@ import {
   updateUserRole,
 } from "@/app/actions/lms";
 import { Button } from "@/components/button";
+import { BrandBanner } from "@/components/brand";
 import { LessonMaterialUploadForm } from "@/components/admin/lesson-material-upload-form";
 import {
   Badge,
   Card,
   EmptyState,
   Field,
-  PageHeader,
   inputClass,
 } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
@@ -274,9 +274,10 @@ export default async function AdminPage({
 
   return (
     <div className="grid gap-8">
-      <PageHeader
-        title="Admin workspace"
-        description="Manage students, classes, curriculum, materials, assignments, and user roles from one organized workspace."
+      <BrandBanner
+        eyebrow="Admin workspace"
+        title="Manage your English learning platform"
+        description="Invite students, build English courses, publish lesson materials, and keep every class moving with confidence."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BookOpen, CheckCircle2 } from "lucide-react";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -68,14 +69,19 @@ export default async function CourseDetailPage({
 
             return (
               <Card key={module.id}>
-                <h2 className="text-lg font-bold">{module.title}</h2>
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-blue-50 text-ocean">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-lg font-bold">{module.title}</h2>
+                </div>
                 {module.summary ? (
                   <p className="mt-1 text-sm text-slate-600">{module.summary}</p>
                 ) : null}
                 <div className="mt-4 grid gap-2">
                   {lessons.length ? lessons.map((lesson: any) => (
                     <Link
-                      className="flex flex-col gap-2 rounded-md border border-slate-200 p-3 transition hover:border-ocean sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-blue-50/30 p-3 transition hover:border-ocean sm:flex-row sm:items-center sm:justify-between"
                       href={`/learn/${lesson.id}`}
                       key={lesson.id}
                     >
@@ -85,7 +91,12 @@ export default async function CourseDetailPage({
                           {lesson.objective || "Lesson activity"}
                         </p>
                       </div>
-                      <Badge>{completed.has(lesson.id) ? "Completed" : "Start"}</Badge>
+                      <span className="inline-flex items-center gap-2">
+                        {completed.has(lesson.id) ? (
+                          <CheckCircle2 className="h-4 w-4 text-mint" />
+                        ) : null}
+                        <Badge>{completed.has(lesson.id) ? "Completed" : "Start"}</Badge>
+                      </span>
                     </Link>
                   )) : (
                     <EmptyState title="No lessons yet" description="Lessons will appear here once created." />

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +33,12 @@ export default async function CoursesPage() {
             <Link key={course.id} href={`/courses/${course.id}`}>
               <Card className="h-full transition hover:-translate-y-0.5 hover:border-ocean">
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-lg font-bold text-ink">{course.title}</h2>
+                  <div className="flex gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-50 text-coral">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-lg font-bold text-ink">{course.title}</h2>
+                  </div>
                   <Badge>{course.level || "Course"}</Badge>
                 </div>
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">

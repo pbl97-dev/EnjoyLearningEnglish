@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ExternalLink, FileText, Headphones, ImageIcon, PlayCircle } from "lucide-react";
 import { markLessonComplete } from "@/app/actions/lms";
 import { Button } from "@/components/button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
@@ -10,7 +11,7 @@ function MaterialView({ material }: { material: any }) {
   if (material.material_type === "html") {
     return (
       <div
-        className="prose-safe rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-7"
+        className="prose-safe rounded-lg border border-blue-100 bg-blue-50/40 p-5 text-sm leading-7"
         dangerouslySetInnerHTML={{
           __html: sanitizeHtml(material.content_html || ""),
         }}
@@ -26,60 +27,80 @@ function MaterialView({ material }: { material: any }) {
     }
 
     return (
-      <iframe
-        className="aspect-video w-full rounded-md border border-slate-200 bg-white"
-        src={embedSrc}
-        title={material.title}
-        loading="lazy"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-        referrerPolicy="no-referrer"
-        allowFullScreen
-      />
+      <div className="overflow-hidden rounded-xl border border-blue-100 bg-white">
+        <div className="border-b border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-ink">
+          Embedded activity
+        </div>
+        <iframe
+          className="aspect-video w-full bg-white"
+          src={embedSrc}
+          title={material.title}
+          loading="lazy"
+          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          referrerPolicy="no-referrer"
+          allowFullScreen
+        />
+      </div>
     );
   }
 
   if (material.material_type === "image" && material.url) {
     return (
-      <img
-        alt={material.title}
-        className="max-h-[520px] w-full rounded-md border border-slate-200 object-contain"
-        src={material.url}
-      />
+      <div className="rounded-xl border border-blue-100 bg-slate-50 p-3">
+        <img
+          alt={material.title}
+          className="max-h-[520px] w-full rounded-lg object-contain"
+          src={material.url}
+        />
+      </div>
     );
   }
 
   if (material.material_type === "audio" && material.url) {
-    return <audio className="w-full" controls src={material.url} />;
+    return (
+      <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+          <Headphones className="h-4 w-4 text-ocean" />
+          Audio practice
+        </div>
+        <audio className="w-full" controls src={material.url} />
+      </div>
+    );
   }
 
   if (material.material_type === "video" && material.url) {
     return (
-      <video
-        className="aspect-video w-full rounded-md bg-black"
-        controls
-        src={material.url}
-      />
+      <div className="overflow-hidden rounded-xl border border-blue-100 bg-black">
+        <video className="aspect-video w-full" controls src={material.url} />
+      </div>
     );
   }
 
   if (material.material_type === "pdf" && material.url) {
     return (
-      <iframe
-        className="h-[640px] w-full rounded-md border border-slate-200 bg-white"
-        src={material.url}
-        title={material.title}
-      />
+      <div className="overflow-hidden rounded-xl border border-blue-100 bg-white">
+        <div className="flex items-center gap-2 border-b border-blue-100 bg-amber-50 px-4 py-2 text-sm font-semibold text-ink">
+          <FileText className="h-4 w-4 text-coral" />
+          PDF material
+        </div>
+        <iframe
+          className="h-[640px] w-full bg-white"
+          src={material.url}
+          title={material.title}
+        />
+      </div>
     );
   }
 
   if (material.url) {
     return (
       <a
-        className="inline-flex min-h-10 items-center rounded-md bg-ocean px-4 py-2 text-sm font-semibold text-white"
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-ocean px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         href={material.url}
         rel="noreferrer"
         target="_blank"
       >
+        <ExternalLink className="h-4 w-4" />
         Open resource
       </a>
     );
@@ -186,7 +207,20 @@ export default async function LessonPage({
           materials.map((material: any) => (
             <Card key={material.id}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-bold">{material.title}</h3>
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-50 text-coral">
+                    {material.material_type === "image" ? (
+                      <ImageIcon className="h-5 w-5" />
+                    ) : material.material_type === "video" ? (
+                      <PlayCircle className="h-5 w-5" />
+                    ) : material.material_type === "audio" ? (
+                      <Headphones className="h-5 w-5" />
+                    ) : (
+                      <FileText className="h-5 w-5" />
+                    )}
+                  </div>
+                  <h3 className="font-bold">{material.title}</h3>
+                </div>
                 <Badge>{material.material_type.replace("_", " ")}</Badge>
               </div>
               <MaterialView material={material} />

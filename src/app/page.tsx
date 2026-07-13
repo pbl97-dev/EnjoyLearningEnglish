@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, CheckCircle2, GraduationCap, Users } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
+import { BrandLogo } from "@/components/brand";
 import { Button } from "@/components/button";
 import { Card } from "@/components/ui";
 
@@ -11,15 +12,13 @@ export default async function HomePage() {
     <main className="min-h-screen bg-paper">
       <section className="mx-auto grid min-h-screen w-full max-w-7xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
         <div>
-          <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-            Enjoy Learning English
-          </div>
+          <BrandLogo />
           <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight text-ink sm:text-6xl">
-            A calm, focused LMS for English classes.
+            Enjoy Learning English
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            Create classes, assign courses, upload lesson materials, and track
-            student progress in one responsive workspace.
+            A friendly LMS for English classes, lesson materials, student
+            practice, and teacher progress tracking.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={profile ? "/dashboard" : "/auth/sign-in"}>
@@ -55,7 +54,7 @@ export default async function HomePage() {
             },
           ].map((item) => (
             <Card key={item.title} className="flex gap-4">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-mint text-white">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-coral text-white">
                 <item.icon className="h-5 w-5" />
               </div>
               <div>

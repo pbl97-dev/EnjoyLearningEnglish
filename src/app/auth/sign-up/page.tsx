@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signUp } from "@/app/actions/auth";
+import { BrandLogo } from "@/components/brand";
 import { Button } from "@/components/button";
 import { Card, Field, inputClass } from "@/components/ui";
 
@@ -14,7 +15,7 @@ export default async function SignUpPage({
     <main className="grid min-h-screen place-items-center bg-paper px-4 py-10">
       <Card className="w-full max-w-md">
         <div>
-          <p className="text-sm font-semibold text-ocean">Enjoy Learning English</p>
+          <BrandLogo />
           <h1 className="mt-2 text-2xl font-bold text-ink">Create account</h1>
           <p className="mt-2 text-sm text-slate-600">
             New accounts start as students. Admins can promote teachers later.

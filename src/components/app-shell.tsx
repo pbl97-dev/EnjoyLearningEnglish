@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
+import { BrandLogo } from "@/components/brand";
 import type { Profile } from "@/lib/types";
 
 const navItems = [
@@ -33,15 +34,9 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-paper">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white px-4 py-5 lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-blue-100 bg-white/95 px-4 py-5 backdrop-blur lg:block">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-ocean text-sm font-bold text-white">
-            ELE
-          </div>
-          <div>
-            <p className="font-bold text-ink">Enjoy Learning</p>
-            <p className="text-xs text-slate-500">English LMS</p>
-          </div>
+          <BrandLogo />
         </Link>
 
         <nav className="mt-8 grid gap-1">
@@ -49,7 +44,7 @@ export function AppShell({
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-ocean"
             >
               <item.icon className="h-4 w-4" />
               {item.label}
@@ -60,7 +55,7 @@ export function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-ocean"
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}
@@ -71,10 +66,13 @@ export function AppShell({
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 border-b border-blue-100 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <PanelLeft className="h-5 w-5 text-slate-500 lg:hidden" />
+              <div className="lg:hidden">
+                <BrandLogo compact />
+              </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-ink">
                   {profile.full_name || "Enjoy Learning English"}
@@ -90,7 +88,7 @@ export function AppShell({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                    className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-ocean"
                   >
                     {item.label}
                   </Link>
@@ -98,7 +96,7 @@ export function AppShell({
               </div>
               <form action={signOut}>
                 <button
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-blue-100 bg-white text-slate-700 hover:bg-blue-50"
                   aria-label="Sign out"
                   title="Sign out"
                 >

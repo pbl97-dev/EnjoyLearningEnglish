@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { BrandBanner } from "@/components/brand";
+import { Badge, Card, EmptyState } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,9 +12,10 @@ export default async function TeacherProgressPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader
-        title="Progress dashboard"
-        description="Completion progress by group, student, and assigned course."
+      <BrandBanner
+        eyebrow="Teacher progress"
+        title="Guide every English learner forward"
+        description="Review completion progress by group, student, and assigned course."
       />
 
       {data?.length ? (

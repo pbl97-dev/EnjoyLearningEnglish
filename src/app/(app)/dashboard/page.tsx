@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, CheckCircle2, Users } from "lucide-react";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { BrandBanner } from "@/components/brand";
+import { Badge, Card, EmptyState } from "@/components/ui";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,22 +19,23 @@ export default async function DashboardPage() {
 
     return (
       <div className="grid gap-6">
-        <PageHeader
-          title="Student dashboard"
-          description="Your assigned English courses and recent completion progress."
+        <BrandBanner
+          eyebrow="Student dashboard"
+          title="Continue learning English"
+          description="Pick up your assigned courses, open the next lesson, and keep building confidence one activity at a time."
         />
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
+          <Card className="border-blue-100 bg-white/90">
             <BookOpen className="h-5 w-5 text-ocean" />
             <p className="mt-3 text-2xl font-bold">{courses?.length || 0}</p>
             <p className="text-sm text-slate-600">Assigned courses</p>
           </Card>
-          <Card>
+          <Card className="border-blue-100 bg-white/90">
             <CheckCircle2 className="h-5 w-5 text-mint" />
             <p className="mt-3 text-2xl font-bold">{progress?.length || 0}</p>
             <p className="text-sm text-slate-600">Lessons completed</p>
           </Card>
-          <Card>
+          <Card className="border-blue-100 bg-white/90">
             <Users className="h-5 w-5 text-coral" />
             <p className="mt-3 text-2xl font-bold">Active</p>
             <p className="text-sm text-slate-600">Learning status</p>
@@ -77,9 +79,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader
-        title={`${profile.role === "admin" ? "Admin" : "Teacher"} dashboard`}
-        description="Manage classes, build courses, assign learning paths, and monitor student progress."
+      <BrandBanner
+        eyebrow={`${profile.role === "admin" ? "Admin" : "Teacher"} dashboard`}
+        title="Manage your English learning platform"
+        description="Build classes, publish English courses, assign lessons, and monitor student progress from one welcoming workspace."
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

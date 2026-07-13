@@ -170,10 +170,21 @@ $env:SUPABASE_SERVICE_ROLE_KEY='placeholder'
 - `src/app` - Next.js App Router pages and server actions
 - `src/app/actions` - Server actions for auth, profile, and LMS workflows
 - `src/components` - Shared dashboard UI components
+- `src/components/brand.tsx` - Enjoy Learning English logo and branded dashboard banner components
 - `src/lib` - Supabase clients, auth helpers, validation, and shared types
 - `src/lib/supabase` - Browser, server, admin, and middleware Supabase clients
 - `supabase/migrations` - Database schema, RLS policies, storage buckets, and storage policies
 - `supabase/seed.sql` - Demo learning content
+
+## Branding
+
+The app loads the Enjoy Learning English logo from:
+
+```text
+public/brand/logo.png
+```
+
+The visual style uses a light blue page background, blue primary actions, warm amber/orange accents, rounded cards, and branded dashboard banners for admin, teacher, and student workspaces.
 
 ## Supabase Data Model
 
